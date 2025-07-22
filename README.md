@@ -7,7 +7,9 @@ A RESTful API built with Spring Boot to track job applications during a job sear
 - **Spring Boot 3.3**
 - **Spring Data JPA**
 - **Maven**
-- **H2 In-Memory Database**
+- **MySQL DataBase**
+
+  Note: You can also use H2 In memory database for this project for that make sure to update application.properties accordingly.
 
 ## API Endpoints
 
