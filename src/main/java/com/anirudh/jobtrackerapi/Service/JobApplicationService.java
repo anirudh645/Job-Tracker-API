@@ -2,28 +2,42 @@ package com.anirudh.jobtrackerapi.Service;
 
 import com.anirudh.jobtrackerapi.model.ApplicationStatus;
 import com.anirudh.jobtrackerapi.model.JobApplication;
+import com.anirudh.jobtrackerapi.model.User;
 import com.anirudh.jobtrackerapi.Respository.JobApplicationRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.anirudh.jobtrackerapi.repository.UserRepository;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
 
 @Service
 public class JobApplicationService {
 
-    @Autowired
-    private JobApplicationRepository jobApplicationRepository;
-    public List<JobApplication> getAllApplications() {
-        return jobApplicationRepository.findAll();
+    private final JobApplicationRepository jobApplicationRepository;
+    private final UserRepository userRepository;
+
+    public JobApplicationService(JobApplicationRepository jobApplicationRepository, UserRepository userRepository) {
+        this.jobApplicationRepository = jobApplicationRepository;
+        this.userRepository = userRepository;
     }
-    public JobApplication createApplication(JobApplication jobApplication) {
+
+    public List<JobApplication> getAllApplications(String username) {
+        return jobApplicationRepository.findByUserUsername(username);
+    }
+
+    public JobApplication createApplication(String username, JobApplication jobApplication) {
+        User currentUser = getRequiredUser(username);
+        jobApplication.setId(null);
+        jobApplication.setUser(currentUser);
         return jobApplicationRepository.save(jobApplication);
     }
-    public JobApplication getApplicationById(Long id) {
-        return jobApplicationRepository.findById(id)
+
+    public JobApplication getApplicationById(String username, Long id) {
+        return jobApplicationRepository.findByIdAndUserUsername(id, username)
                 .orElseThrow(() -> new RuntimeException("Application not found with id: " + id));
     }
-    public JobApplication updateApplication(JobApplication jobApplication) {
-        return jobApplicationRepository.findById(jobApplication.getId())
+
+    public JobApplication updateApplication(String username, Long id, JobApplication jobApplication) {
+        return jobApplicationRepository.findByIdAndUserUsername(id, username)
                 .map(existingApplication -> {
                     existingApplication.setCompanyName(jobApplication.getCompanyName());
                     existingApplication.setJobTitle(jobApplication.getJobTitle());
@@ -31,16 +45,23 @@ public class JobApplicationService {
                     existingApplication.setDateApplied(jobApplication.getDateApplied());
                     existingApplication.setJobUrl(jobApplication.getJobUrl());
                     return jobApplicationRepository.save(existingApplication);
-                }).orElseThrow(() -> new RuntimeException("Application not found with id: " + jobApplication.getId()));
+                }).orElseThrow(() -> new RuntimeException("Application not found with id: " + id));
     }
-    public boolean deleteApplication(Long id) {
-        if (!jobApplicationRepository.existsById(id)) {
+
+    public boolean deleteApplication(String username, Long id) {
+        if (!jobApplicationRepository.existsByIdAndUserUsername(id, username)) {
             return false;
         }
         jobApplicationRepository.deleteById(id);
         return true;
     }
-    public List<JobApplication> getApplicationsByStatus(ApplicationStatus status) {
-        return jobApplicationRepository.findByStatus(status);
+
+    public List<JobApplication> getApplicationsByStatus(String username, ApplicationStatus status) {
+        return jobApplicationRepository.findByUserUsernameAndStatus(username, status);
+    }
+
+    private User getRequiredUser(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
     }
 }
